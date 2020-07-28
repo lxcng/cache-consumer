@@ -129,7 +129,7 @@ func getCachedURL(ctx context.Context, url string, results chan string, wg *sync
 
 	// request timeout - 1s
 	for i := 0; i < 20; i++ {
-		// get url cached responce/lock id
+		// get cached responce
 		res, err := rdb.Get(url).Result()
 		if err == nil {
 			log.Printf("got cached resp for %s\n", url)
@@ -147,14 +147,14 @@ func getCachedURL(ctx context.Context, url string, results chan string, wg *sync
 			log.Printf("got lock on %s\n", url)
 			// query url if lock id in redis equals to goroutine id
 			res, err := getURL(ctx, url)
-			if err != nil {
-				log.Printf("store error for %v\n", url)
-				rdb.Set(url, err.Error(), getRandEx())
-				results <- err.Error()
-			} else {
+			if err == nil {
 				log.Printf("store responce for %v\n", url)
 				rdb.Set(url, res, getRandEx())
 				results <- res
+			} else {
+				log.Printf("store error for %v\n", url)
+				rdb.Set(url, err.Error(), getRandEx())
+				results <- err.Error()
 			}
 			return
 		} else {
