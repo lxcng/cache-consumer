@@ -42,7 +42,7 @@ func requestJob(c pb.MessageBusClient) {
 func request(c pb.MessageBusClient) {
 	stream, err := c.GetRandomDataStream(context.Background(), &pb.Request{})
 	if err != nil {
-		log.Println(err)
+		log.Printf("grpc error: %v\n", err)
 	}
 	for {
 		resp, err := stream.Recv()
@@ -50,7 +50,7 @@ func request(c pb.MessageBusClient) {
 			break
 		}
 		if err != nil {
-			log.Println(err)
+			log.Printf("stream error: %v\n", err)
 			break
 		}
 		log.Println(resp.Message)

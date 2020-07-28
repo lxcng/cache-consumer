@@ -116,53 +116,52 @@ func getRandURL() string {
 func getRandEx() time.Duration {
 	i := rand.Intn(conf.MaxTimeout - conf.MinTimeout + 1)
 	return time.Duration(conf.MinTimeout+i) * time.Millisecond
-	// return 15 * time.Second
+}
+
+func getLockName(url string) string {
+	return "lock_" + url
 }
 
 // getCachedURL returns cached responce from redis or stores response with double commit
 func getCachedURL(ctx context.Context, url string, results chan string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	routineId := uuid.New()
-	// try to put lock on url
-	rdb.SetNX(url, routineId.String(), 0)
 
-	log.Printf("getting %s, with lock %s\n", url, routineId.String())
-	result := ""
 	// request timeout - 1s
 	for i := 0; i < 20; i++ {
 		// get url cached responce/lock id
 		res, err := rdb.Get(url).Result()
+		if err == nil {
+			log.Printf("got cached resp for %s\n", url)
+			results <- res
+			return
+		}
+		// try to put lock on url. if locked is true then either current routine has the lock or the lock doesn't exist.
+		locked, err := rdb.SetNX(getLockName(url), routineId.String(), time.Second*2).Result()
 		if err != nil {
+			time.Sleep(time.Millisecond * 50)
 			continue
 		}
-		if lock, err := uuid.Parse(res); err == nil {
-			if lock.String() == routineId.String() {
-				log.Printf("got lock on %s\n", url)
-				// query url if lock id in redis equals to goroutine id
-				res, err := getURL(ctx, url)
-				if err != nil {
-					log.Printf("got cached error for %s\n", url)
-					rdb.Set(url, err.Error(), getRandEx())
-					result = err.Error()
-				} else {
-					log.Println(err)
-					rdb.Set(url, res, getRandEx())
-					result = res
-				}
-				break
+
+		if locked {
+			log.Printf("got lock on %s\n", url)
+			// query url if lock id in redis equals to goroutine id
+			res, err := getURL(ctx, url)
+			if err != nil {
+				log.Printf("store error for %v\n", url)
+				rdb.Set(url, err.Error(), getRandEx())
+				results <- err.Error()
+			} else {
+				log.Printf("store responce for %v\n", url)
+				rdb.Set(url, res, getRandEx())
+				results <- res
 			}
-			// wait 50 ms
-			log.Printf("waiting for %s\n", url)
-			time.Sleep(time.Millisecond * 50)
+			return
 		} else {
-			// got non uuid data from redis, hence cached responce
-			log.Printf("got cached resp for %s\n", url)
-			result = res
-			break
+			time.Sleep(time.Millisecond * 50)
+			continue
 		}
 	}
-
-	results <- result
 }
 
 func getURL(ctx context.Context, url string) (string, error) {
@@ -180,5 +179,6 @@ func getURL(ctx context.Context, url string) (string, error) {
 		return "", err
 	}
 
+	log.Printf("got data for %s\n", url)
 	return string(bt), nil
 }
