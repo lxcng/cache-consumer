@@ -128,6 +128,7 @@ func getCachedURL(ctx context.Context, url string, results chan string, wg *sync
 
 	log.Printf("getting %s, with lock %s\n", url, routineId.String())
 	result := ""
+	// request timeout - 1s
 	for i := 0; i < 20; i++ {
 		// get url cached responce/lock id
 		res, err := rdb.Get(url).Result()
