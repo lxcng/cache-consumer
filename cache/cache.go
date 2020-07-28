@@ -156,6 +156,8 @@ func getCachedURL(ctx context.Context, url string, results chan string, wg *sync
 				rdb.Set(url, err.Error(), getRandEx())
 				results <- err.Error()
 			}
+			// delete lock on url
+			rdb.Del(getLockName(url))
 			return
 		} else {
 			time.Sleep(time.Millisecond * 50)
