@@ -1,0 +1,12 @@
+syntax = "proto3";
+option go_package = "cache-consumer/message_bus";
+
+service Message_bus {
+    rpc GetRandomDataStream (Request) returns (stream Reply);
+}
+
+message Request {}
+
+message Reply {
+    string message = 1;
+}
