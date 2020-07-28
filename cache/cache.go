@@ -159,7 +159,6 @@ func getCachedURL(ctx context.Context, url string, results chan string, wg *sync
 			return
 		} else {
 			time.Sleep(time.Millisecond * 50)
-			continue
 		}
 	}
 }
