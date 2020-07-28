@@ -23,14 +23,11 @@ func main() {
 	defer conn.Close()
 	c := pb.NewMessageBusClient(conn)
 
-	// for i := 0; i < 5; i++ {
-	// 	request(c)
-	// }
-	populate(c)
+	populateJobs(c)
 	time.Sleep(time.Second * 1e3)
 }
 
-func populate(c pb.MessageBusClient) {
+func populateJobs(c pb.MessageBusClient) {
 	for i := 0; i < 1e3; i++ {
 		go requestJob(c)
 	}
